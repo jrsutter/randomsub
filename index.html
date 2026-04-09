@@ -1,70 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Random NSFW Viewer</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #111;
+  color: white;
+  text-align: center;
+}
+
+/* Sticky header */
+header {
+  position: sticky;
+  top: 0;
+  background: #000;
+  padding: 15px;
+  z-index: 1000;
+  border-bottom: 2px solid #333;
+}
+
+button {
+  padding: 10px 15px;
+  margin: 5px;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+#randomBtn {
+  background: #ff4757;
+  color: white;
+}
+
+#toggleBtn {
+  background: #1e90ff;
+  color: white;
+}
+
+#content {
+  padding: 20px;
+}
+
+img, video {
+  max-width: 90%;
+  margin-top: 20px;
+  border-radius: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h2>🔥 Random NSFW Viewer</h2>
+  <button id="randomBtn">🔀 Random</button>
+  <button id="toggleBtn">👁 Toggle Media</button>
+</header>
+
+<div id="content">
+  <h3>Click Random to start</h3>
+</div>
+
 <script>
+// 🔥 FULL SUBREDDIT LIST
 const subreddits = [
-  "nsfw",
-  "gonewild",
-  "nsfw_gifs",
-  "rule34",
-  "nsfwcosplay"
+  // General
+  "nsfw","nsfw_gifs","NSFW_GIF","porn","rule34","nsfwcosplay",
+
+  // Gonewild network
+  "gonewild","gonewildcurvy","gonewildplus","gonewild18",
+  "gonewild30plus","PetiteGoneWild","AsiansGoneWild","LatinasGW",
+
+  // GIFs / Video
+  "porn_gifs","nsfw_videos","watchitfortheplot",
+
+  // Hentai
+  "hentai","ecchi","hentaigif","animebooty","2busty2hide",
+
+  // Body
+  "ass","boobs","bigboobs","petite","latinas","asians",
+  "milf","thick","fitgirls",
+
+  // Cosplay
+  "cosplaygirls","rule34cosplay"
 ];
 
 let showMedia = true;
 
-document.getElementById("randomBtn").addEventListener("click", loadRandomPost);
-document.getElementById("toggleMedia").addEventListener("click", () => {
+document.getElementById("randomBtn").onclick = loadRandomPost;
+document.getElementById("toggleBtn").onclick = () => {
   showMedia = !showMedia;
-  loadRandomPost();
-});
+};
 
 async function loadRandomPost() {
-  const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
+  const content = document.getElementById("content");
+  content.innerHTML = "<p>Loading...</p>";
 
-  // 🔥 Use proxy to bypass Reddit blocking
-  const redditURL = `https://www.reddit.com/r/${subreddit}/hot.json?limit=50`;
-  const proxyURL = `https://api.allorigins.win/raw?url=${encodeURIComponent(redditURL)}`;
+  // try multiple times to avoid blanks
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const sub = subreddits[Math.floor(Math.random() * subreddits.length)];
 
-  try {
-    const res = await fetch(proxyURL);
-    const text = await res.text();
-    const data = JSON.parse(text);
+    try {
+      const redditURL = `https://www.reddit.com/r/${sub}/hot.json?limit=50`;
+      const proxyURL = `https://api.allorigins.win/raw?url=${encodeURIComponent(redditURL)}`;
 
-    if (!data?.data?.children?.length) {
-      throw new Error("No posts found");
-    }
+      const res = await fetch(proxyURL);
+      const text = await res.text();
+      const data = JSON.parse(text);
 
-    const posts = data.data.children;
-    const randomPost = posts[Math.floor(Math.random() * posts.length)].data;
+      if (!data?.data?.children?.length) continue;
 
-    const contentDiv = document.getElementById("content");
+      const posts = data.data.children;
 
-    contentDiv.innerHTML = `
-      <h3>${randomPost.title || "Untitled"}</h3>
-      <a href="https://reddit.com${randomPost.permalink}" target="_blank">View on Reddit</a>
-    `;
+      for (let i = 0; i < 10; i++) {
+        const post = posts[Math.floor(Math.random() * posts.length)].data;
+        const media = post.url || "";
 
-    if (showMedia) {
-      const url = randomPost.url || "";
+        // If media is OFF
+        if (!showMedia) {
+          content.innerHTML = `<h3>${post.title}</h3>`;
+          return;
+        }
 
-      if (url.match(/\.(jpg|jpeg|png)$/i)) {
-        contentDiv.innerHTML += `<img src="${url}">`;
-      } 
-      else if (url.match(/\.(gif)$/i) || url.includes("gifv")) {
-        const gifUrl = url.replace(".gifv", ".mp4");
-        contentDiv.innerHTML += `<video src="${gifUrl}" autoplay loop controls></video>`;
-      } 
-      else if (randomPost.is_video && randomPost.media?.reddit_video?.fallback_url) {
-        contentDiv.innerHTML += `<video src="${randomPost.media.reddit_video.fallback_url}" autoplay loop controls></video>`;
-      } 
-      else {
-        contentDiv.innerHTML += `<p>No previewable media found.</p>`;
+        // IMAGE
+        if (media.match(/\.(jpg|jpeg|png)$/i)) {
+          content.innerHTML = `
+            <h3>${post.title}</h3>
+            <img src="${media}">
+          `;
+          return;
+        }
+
+        // GIF / VIDEO
+        if (media.includes("gif") || post.is_video) {
+          const vid =
+            post.media?.reddit_video?.fallback_url ||
+            media.replace(".gifv", ".mp4");
+
+          if (vid) {
+            content.innerHTML = `
+              <h3>${post.title}</h3>
+              <video src="${vid}" autoplay loop controls></video>
+            `;
+            return;
+          }
+        }
       }
-    }
 
-  } catch (err) {
-    console.error("ERROR:", err);
-    document.getElementById("content").innerHTML = `
-      <p>⚠️ Failed to load content.</p>
-      <p>Click again or try a different network.</p>
-    `;
+    } catch (err) {
+      console.log("Retrying...");
+    }
   }
+
+  content.innerHTML = "<p>⚠️ Couldn't find content. Click again.</p>";
 }
 </script>
+
+</body>
+</html>
