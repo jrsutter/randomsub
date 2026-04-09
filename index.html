@@ -18,33 +18,34 @@ document.getElementById("toggleMedia").addEventListener("click", () => {
 async function loadRandomPost() {
   const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
 
-  // Use "hot" instead of random (more reliable)
-  const url = `https://www.reddit.com/r/${subreddit}/hot.json?limit=50`;
+  // 🔥 Use proxy to bypass Reddit blocking
+  const redditURL = `https://www.reddit.com/r/${subreddit}/hot.json?limit=50`;
+  const proxyURL = `https://api.allorigins.win/raw?url=${encodeURIComponent(redditURL)}`;
 
   try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0"
-      }
-    });
+    const res = await fetch(proxyURL);
+    const text = await res.text();
+    const data = JSON.parse(text);
 
-    const data = await res.json();
+    if (!data?.data?.children?.length) {
+      throw new Error("No posts found");
+    }
+
     const posts = data.data.children;
-
-    // pick random post from list
     const randomPost = posts[Math.floor(Math.random() * posts.length)].data;
 
     const contentDiv = document.getElementById("content");
+
     contentDiv.innerHTML = `
-      <h3>${randomPost.title}</h3>
+      <h3>${randomPost.title || "Untitled"}</h3>
       <a href="https://reddit.com${randomPost.permalink}" target="_blank">View on Reddit</a>
     `;
 
     if (showMedia) {
-      const url = randomPost.url;
+      const url = randomPost.url || "";
 
       if (url.match(/\.(jpg|jpeg|png)$/i)) {
-        contentDiv.innerHTML += `<img src="${url}" />`;
+        contentDiv.innerHTML += `<img src="${url}">`;
       } 
       else if (url.match(/\.(gif)$/i) || url.includes("gifv")) {
         const gifUrl = url.replace(".gifv", ".mp4");
@@ -59,8 +60,11 @@ async function loadRandomPost() {
     }
 
   } catch (err) {
-    console.error(err);
-    document.getElementById("content").innerHTML = `<p>Error loading content. Try again.</p>`;
+    console.error("ERROR:", err);
+    document.getElementById("content").innerHTML = `
+      <p>⚠️ Failed to load content.</p>
+      <p>Click again or try a different network.</p>
+    `;
   }
 }
 </script>
