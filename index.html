@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Random NSFW Reddit Viewer</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      text-align: center;
+    }
+
+    /* Sticky header */
+    header {
+      position: sticky;
+      top: 0;
+      background: #000;
+      padding: 15px;
+      z-index: 1000;
+      border-bottom: 2px solid #333;
+    }
+
+    button {
+      padding: 10px 15px;
+      margin: 5px;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      border-radius: 5px;
+    }
+
+    #randomBtn {
+      background: #ff4757;
+      color: white;
+    }
+
+    #toggleMedia {
+      background: #1e90ff;
+      color: white;
+    }
+
+    #content {
+      padding: 20px;
+    }
+
+    img, video {
+      max-width: 90%;
+      margin-top: 20px;
+      border-radius: 10px;
+    }
+
+    a {
+      color: #70a1ff;
+      display: block;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h2>Random NSFW Reddit Viewer</h2>
+  <button id="randomBtn">🔀 Random NSFW</button>
+  <button id="toggleMedia">👁 Show/Hide Media</button>
+</header>
+
+<div id="content">
+  <h3>Click "Random NSFW" to begin</h3>
+</div>
+
+<script>
+const subreddits = [
+  "nsfw",
+  "gonewild",
+  "nsfw_gifs",
+  "rule34",
+  "nsfwcosplay"
+];
+
+let showMedia = true;
+
+document.getElementById("randomBtn").addEventListener("click", loadRandomPost);
+document.getElementById("toggleMedia").addEventListener("click", () => {
+  showMedia = !showMedia;
+  loadRandomPost();
+});
+
+async function loadRandomPost() {
+  const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
+  const url = `https://www.reddit.com/r/${subreddit}/random.json`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const post = data[0].data.children[0].data;
+
+    const contentDiv = document.getElementById("content");
+    contentDiv.innerHTML = `
+      <h3>${post.title}</h3>
+      <a href="https://reddit.com${post.permalink}" target="_blank">View on Reddit</a>
+    `;
+
+    if (showMedia) {
+      if (post.url.endsWith(".jpg") || post.url.endsWith(".png") || post.url.endsWith(".jpeg")) {
+        contentDiv.innerHTML += `<img src="${post.url}" />`;
+      } 
+      else if (post.url.endsWith(".gif") || post.url.includes("gifv")) {
+        const gifUrl = post.url.replace(".gifv", ".mp4");
+        contentDiv.innerHTML += `<video src="${gifUrl}" autoplay loop controls></video>`;
+      } 
+      else if (post.is_video && post.media?.reddit_video?.fallback_url) {
+        contentDiv.innerHTML += `<video src="${post.media.reddit_video.fallback_url}" autoplay loop controls></video>`;
+      } 
+      else {
+        contentDiv.innerHTML += `<p>No previewable media found.</p>`;
+      }
+    }
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById("content").innerHTML = `<p>Error loading content. Try again.</p>`;
+  }
+}
+</script>
+
+</body>
+</html>
