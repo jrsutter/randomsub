@@ -1,81 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Random NSFW Viewer</title>
-
-<style>
-body {
-  margin: 0;
-  font-family: Arial;
-  background: #111;
-  color: white;
-  text-align: center;
-}
-
-/* Sticky header */
-header {
-  position: sticky;
-  top: 0;
-  background: #000;
-  padding: 15px;
-  z-index: 1000;
-  border-bottom: 2px solid #333;
-}
-
-button {
-  padding: 10px 15px;
-  margin: 5px;
-  border: none;
-  cursor: pointer;
-  border-radius: 5px;
-  font-size: 16px;
-}
-
-#randomBtn {
-  background: #ff4757;
-  color: white;
-}
-
-#toggleBtn {
-  background: #1e90ff;
-  color: white;
-}
-
-#content {
-  padding: 20px;
-}
-
-img, video {
-  max-width: 90%;
-  margin-top: 20px;
-  border-radius: 10px;
-}
-</style>
-</head>
-
-<body>
-
-<header>
-  <h2>🔥 Random NSFW Viewer</h2>
-  <button id="randomBtn">🔀 Random</button>
-  <button id="toggleBtn">👁 Toggle Media</button>
-</header>
-
-<div id="content">
-  <h3>Click Random to start</h3>
-</div>
-
 <script>
-// 🔥 FULL SUBREDDIT LIST
 const subreddits = [
-  // General
-  "nsfw","nsfw_gifs","NSFW_GIF","porn","rule34","nsfwcosplay",
-
-  // Gonewild network
-  "gonewild","gonewildcurvy","gonewildplus","gonewild18",
-  "gonewild30plus","PetiteGoneWild","AsiansGoneWild","LatinasGW", 
-  "nsfw_gifs",
+  "gonewild","nsfw_gifs","porn_gifs","rule34","hentai",
+  "ass","boobs","milf","thick","fitgirls","realgirls","nsfw_gifs",
   "NSFW_GIF",
   "porn_gifs",
   "nsfw_videos",
@@ -83,91 +9,54 @@ const subreddits = [
   "watchitfortheplot",
   "NSFWFunny",
   "NSFW_HTML5"
-
-  // GIFs / Video
-  "porn_gifs","nsfw_videos","watchitfortheplot",
-
-  // Hentai
-  "hentai","ecchi","hentaigif","animebooty","2busty2hide",
-
-  // Body
-  "ass","boobs","bigboobs","petite","latinas","asians",
-  "milf","thick","fitgirls",
-
-  // Cosplay
-  "cosplaygirls","rule34cosplay"
 ];
 
-let showMedia = true;
+document.getElementById("randomBtn").onclick = loadPost;
 
-document.getElementById("randomBtn").onclick = loadRandomPost;
-document.getElementById("toggleBtn").onclick = () => {
-  showMedia = !showMedia;
-};
-
-async function loadRandomPost() {
+async function loadPost() {
   const content = document.getElementById("content");
   content.innerHTML = "<p>Loading...</p>";
 
-  // try multiple times to avoid blanks
-  for (let attempt = 0; attempt < 6; attempt++) {
+  try {
     const sub = subreddits[Math.floor(Math.random() * subreddits.length)];
 
-    try {
-      const redditURL = `https://www.reddit.com/r/${sub}/hot.json?limit=50`;
-      const proxyURL = `https://api.allorigins.win/raw?url=${encodeURIComponent(redditURL)}`;
+    const url = `https://api.allorigins.win/raw?url=https://www.reddit.com/r/${sub}/hot.json?limit=50`;
 
-      const res = await fetch(proxyURL);
-      const text = await res.text();
-      const data = JSON.parse(text);
+    const res = await fetch(url);
+    const data = await res.json();
 
-      if (!data?.data?.children?.length) continue;
+    const posts = data.data.children;
 
-      const posts = data.data.children;
+    for (let i = 0; i < posts.length; i++) {
+      const post = posts[Math.floor(Math.random() * posts.length)].data;
+      const media = post.url || "";
 
-      for (let i = 0; i < 10; i++) {
-        const post = posts[Math.floor(Math.random() * posts.length)].data;
-        const media = post.url || "";
-
-        // If media is OFF
-        if (!showMedia) {
-          content.innerHTML = `<h3>${post.title}</h3>`;
-          return;
-        }
-
-        // IMAGE
-        if (media.match(/\.(jpg|jpeg|png)$/i)) {
-          content.innerHTML = `
-            <h3>${post.title}</h3>
-            <img src="${media}">
-          `;
-          return;
-        }
-
-        // GIF / VIDEO
-        if (media.includes("gif") || post.is_video) {
-          const vid =
-            post.media?.reddit_video?.fallback_url ||
-            media.replace(".gifv", ".mp4");
-
-          if (vid) {
-            content.innerHTML = `
-              <h3>${post.title}</h3>
-              <video src="${vid}" autoplay loop controls></video>
-            `;
-            return;
-          }
-        }
+      if (media.match(/\.(jpg|jpeg|png)$/i)) {
+        content.innerHTML = `
+          <h3>${post.title}</h3>
+          <img src="${media}">
+        `;
+        return;
       }
 
-    } catch (err) {
-      console.log("Retrying...");
-    }
-  }
+      if (media.includes("gif") || post.is_video) {
+        const vid =
+          post.media?.reddit_video?.fallback_url ||
+          media.replace(".gifv", ".mp4");
 
-  content.innerHTML = "<p>⚠️ Couldn't find content. Click again.</p>";
+        content.innerHTML = `
+          <h3>${post.title}</h3>
+          <video src="${vid}" autoplay loop controls></video>
+        `;
+        return;
+      }
+    }
+
+    content.innerHTML = "<p>No media found, try again</p>";
+
+  } catch (err) {
+    content.innerHTML = "<p>⚠️ Error loading content</p>";
+    console.error(err);
+  }
 }
 </script>
-
-</body>
-</html>
